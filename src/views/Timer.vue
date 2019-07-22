@@ -1,13 +1,13 @@
 <template>
-  <div class="element">
-    <el-form v-model="task">
+  <div class="timer">
+    <el-form v-model="task" @submit.native.prevent="addTask">
       <el-form-item>
         <el-input type="text" v-model="task.name">
-          <el-button slot="append" native-type="submit" @click="addTask">ADD</el-button>
+          <el-button slot="append" native-type="submit">ADD</el-button>
         </el-input>
       </el-form-item>
     </el-form>
-    <el-table :data="tasks" height="100%" :row-class-name="dispatchRowClass">
+    <el-table :data="tasks" @selection-change="onSelectionChange" height="100%" :row-class-name="dispatchRowClass">
       <el-table-column type="selection" width="50" />
       <el-table-column label="Project" width="150">
         <template slot-scope="scope">
@@ -25,7 +25,11 @@
           </el-select>
         </template>
       </el-table-column>
-      <el-table-column label="Task" prop="name" />
+      <el-table-column label="Task" prop="name">
+        <template slot-scope="scope">
+          <el-input type="text" size="mini" v-model="scope.row.name" />
+        </template>
+      </el-table-column>
       <el-table-column label="Tags" width="120">
         <template slot-scope="scope">
           <el-tag v-for="t in scope.row.tags" :key="t.id" size="mini" closable @close="removeTag(scope.row, t)">
@@ -45,9 +49,10 @@
           </el-select>
         </template>
       </el-table-column>
-      <el-table-column label="Time" width="100">
+      <el-table-column label="Time" width="100" class-name="col-time">
         <template slot-scope="scope">
-          {{calculateTime(scope.row)}}
+          <i class="el-icon-time"></i>
+          <span>{{calculateTime(scope.row)}}</span>
         </template>
       </el-table-column>
       <el-table-column width="100">
@@ -56,13 +61,15 @@
         </template>
       </el-table-column>
     </el-table>
-    <el-button @click="dump">DUMP</el-button>
+    <footer>
+      <el-button @click="done">DONE</el-button>
+      <el-button @click="dump">DUMP</el-button>
+    </footer>
   </div>
 </template>
 
 <script lang="ts">
 import { Component, Vue } from "vue-property-decorator";
-import { Button, Dialog } from "element-ui";
 import { ulid } from 'ulid';
 import { differenceInSeconds, differenceInHours, getSeconds, getMinutes } from 'date-fns'
 
@@ -95,20 +102,24 @@ const pad = (n: number, d: number) => {
 }
 
 @Component({})
-export default class Element extends Vue {
+export default class Timer extends Vue {
   task: Task = emptyTask()
   tasks: Task[] = []
   projects: Project[] = []
   tags: Tag[] = []
-  creatingTag: boolean = false
   tag: Tag = emptyTag()
   start: Date = new Date()
   now: Date = new Date()
   intervalId: any = null
+  selectedTasks: Task[] = []
 
   addTask() {
-    this.tasks.push(Object.assign({}, this.task, { id: ulid() }))
+    this.tasks.unshift(Object.assign({}, this.task, { id: ulid() }))
     this.task = emptyTask()
+  }
+
+  onSelectionChange(selectedTasks: Task[]) {
+    this.selectedTasks = selectedTasks;
   }
 
   dispatchRowClass({ row }: { row: Task }) {
@@ -180,31 +191,10 @@ export default class Element extends Vue {
     task.tags = task.tags.filter(t => t.id !== tag.id)
   }
 
-  startCreateTag() {
-    this.creatingTag = true
-  }
-
-  endCreateTag(task: Task) {
-    const tagName = this.tag.name.trim()
-    this.creatingTag = false
-    this.tag = emptyTag()
-
-    if (!tagName) {
-      return
-    }
-
-    const found = this.tags.filter(t => t.name === tagName)
-    if (found.length) {
-      if (!task.tags.some(t => t.id === found[0].id)) {
-        task.tags.push(found[0])
-      }
-
-      return
-    }
-
-    const t = { id: ulid(), name: tagName }
-    this.tags.push(t)
-    task.tags.push(t)
+  done() {
+    this.tasks = this.selectedTasks.reduce((tasks, st) => {
+      return tasks.filter(t => t.id !== st.id)
+    }, this.tasks)
   }
 
   dump() {
@@ -225,13 +215,22 @@ export default class Element extends Vue {
 
 <style>
 
-.element {
+.timer {
   display: flex;
   flex-direction: column;
 }
 
-.el-table .task-running {
+.timer .el-table .task-running {
   background: #f0f9eb;
+}
+
+.timer .el-table .col-time span {
+  margin-left: 4px;
+}
+
+.timer footer {
+  display: flex;
+  padding-top: 1rem;
 }
 
 </style>

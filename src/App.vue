@@ -1,11 +1,9 @@
 <template>
   <div id="app">
     <div id="nav">
-      <router-link to="/">Home</router-link> |
-      <router-link to="/element">Element</router-link> |
-      <router-link to="/about">About</router-link>
+      <router-link to="/">Timer</router-link>
     </div>
-    <router-view style="flex: 1; padding: 2rem;" />
+    <router-view class="content" />
   </div>
 </template>
 
@@ -38,6 +36,11 @@
 
 #nav a.router-link-exact-active {
   color: #42b983;
+}
+
+#app .content {
+  flex: 1;
+  padding: 2rem;
 }
 
 </style>
